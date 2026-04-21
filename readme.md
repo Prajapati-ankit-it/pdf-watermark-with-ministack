@@ -1,6 +1,11 @@
-# PDF Processing API - Production Ready
+# PDF Processing API
  
 ## Overview
+ 
+A production-ready PDF processing service with S3 signed URLs, asynchronous processing, and job tracking. Built with Node.js, Express, AWS SDK v3, and optimized for scalability and performance.
+ 
+This system demonstrates real-world backend architecture with clean separation of concerns, proper error handling, and comprehensive API documentation.
+ 
  
 A production-ready PDF processing service with S3 signed URLs, asynchronous processing, and job tracking. Built with Node.js, Express, AWS SDK v3, and optimized for scalability and performance.
  
@@ -409,6 +414,7 @@ quiet=true npm start
 MIT License - see LICENSE file for details
  
 ---
+ 
  
 ## Author
  

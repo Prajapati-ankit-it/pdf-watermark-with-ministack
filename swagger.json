@@ -35,6 +35,10 @@
     {
       "name": "Download",
       "description": "File download operations using signed URLs"
+    },
+    {
+      "name": "UI",
+      "description": "Dynamic HTML interface for PDF processing"
     }
   ],
   "paths": {
@@ -301,6 +305,38 @@
           },
           "500": {
             "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/ui": {
+      "get": {
+        "tags": ["UI"],
+        "summary": "Get dynamic HTML interface",
+        "description": "Returns a complete HTML page with client-side JavaScript for PDF processing. The UI handles file upload, processing, and download through the API endpoints.",
+        "operationId": "getUI",
+        "responses": {
+          "200": {
+            "description": "HTML interface returned successfully",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "<!DOCTYPE html><html>...</html>"
+              }
+            }
+          },
+          "500": {
+            "description": "Service unavailable",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                },
+                "example": "<h1>Service Unavailable</h1><p>The UI service is temporarily unavailable.</p>"
+              }
+            }
           }
         }
       }
