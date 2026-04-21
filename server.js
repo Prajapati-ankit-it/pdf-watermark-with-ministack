@@ -1,12 +1,25 @@
+require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
-const { uploadFile, getFile } = require('../services/s3Service');
-const { handler } = require('../lambda/processPdf');
+const { uploadFile, getFile } = require('./services/s3Service');
+const { handler } = require('./lambda/processPdf');
+const signedUrlRoutes = require('./routes/signedUrlRoutes');
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./swagger.json');
 
 const app = express();
 const upload = multer();
+app.use(express.json());
 
 const BUCKET = 'pdf-bucket';
+
+app.use('/api', signedUrlRoutes);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
+// Redirect root to API documentation
+app.get('/', (req, res) => {
+  res.redirect('/api-docs');
+});
 
 app.post('/upload', upload.single('file'), async (req, res) => {
   try {

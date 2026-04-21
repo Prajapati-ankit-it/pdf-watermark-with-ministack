@@ -1,0 +1,540 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PDF Processing API",
+    "description": "Production-ready PDF processing service with S3 signed URLs, async processing, and job tracking",
+    "version": "1.0.0",
+    "contact": {
+      "name": "API Support",
+      "email": "support@example.com"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Development server"
+    },
+    {
+      "url": "https://api.example.com",
+      "description": "Production server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Upload",
+      "description": "File upload operations using signed URLs"
+    },
+    {
+      "name": "Processing",
+      "description": "PDF processing and job management"
+    },
+    {
+      "name": "Download",
+      "description": "File download operations using signed URLs"
+    }
+  ],
+  "paths": {
+    "/api/upload-url": {
+      "post": {
+        "tags": ["Upload"],
+        "summary": "Generate signed URL for file upload",
+        "description": "Creates a presigned URL for direct upload to S3. The client uploads directly to S3 using this URL.",
+        "operationId": "getUploadUrl",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UploadUrlRequest"
+              },
+              "examples": {
+                "valid": {
+                  "summary": "Valid request",
+                  "value": {
+                    "filename": "document.pdf",
+                    "contentType": "application/pdf"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signed URL generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadUrlResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Successful response",
+                    "value": {
+                      "url": "http://localhost:4566/pdf-bucket/uploads/1640995200000-document.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=test%2F20211231%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20211231T120000Z&X-Amz-Expires=300&X-Amz-Signature=abc123",
+                      "key": "uploads/1640995200000-document.pdf"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/api/process": {
+      "post": {
+        "tags": ["Processing"],
+        "summary": "Start PDF processing",
+        "description": "Starts asynchronous PDF processing with header, footer, and watermark. Returns a job ID for tracking.",
+        "operationId": "processPdf",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProcessRequest"
+              },
+              "examples": {
+                "full_processing": {
+                  "summary": "Complete PDF processing",
+                  "value": {
+                    "key": "uploads/1640995200000-document.pdf",
+                    "header": "CONFIDENTIAL",
+                    "footer": "Company Name",
+                    "watermark": "DRAFT"
+                  }
+                },
+                "minimal_processing": {
+                  "summary": "Minimal processing",
+                  "value": {
+                    "key": "uploads/1640995200000-document.pdf",
+                    "header": "Header Only"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Processing started successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProcessResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Processing started",
+                    "value": {
+                      "message": "Processing started",
+                      "jobId": "job_1640995200000_abc123def"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/api/job-status": {
+      "get": {
+        "tags": ["Processing"],
+        "summary": "Get job processing status",
+        "description": "Retrieves the current status of a PDF processing job including output file location when complete.",
+        "operationId": "getJobStatus",
+        "parameters": [
+          {
+            "name": "jobId",
+            "in": "query",
+            "required": true,
+            "description": "Unique identifier for the processing job",
+            "schema": {
+              "type": "string",
+              "pattern": "^job_[0-9]+_[a-z0-9]+$",
+              "example": "job_1640995200000_abc123def"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job status retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobStatusResponse"
+                },
+                "examples": {
+                  "processing": {
+                    "summary": "Job still processing",
+                    "value": {
+                      "jobId": "job_1640995200000_abc123def",
+                      "status": "processing",
+                      "outputKey": null,
+                      "error": null,
+                      "createdAt": "2024-01-01T12:00:00.000Z",
+                      "completedAt": null,
+                      "failedAt": null
+                    }
+                  },
+                  "completed": {
+                    "summary": "Job completed successfully",
+                    "value": {
+                      "jobId": "job_1640995200000_abc123def",
+                      "status": "done",
+                      "outputKey": "processed-uploads/1640995200000-document.pdf",
+                      "error": null,
+                      "createdAt": "2024-01-01T12:00:00.000Z",
+                      "completedAt": "2024-01-01T12:00:05.000Z",
+                      "failedAt": null
+                    }
+                  },
+                  "failed": {
+                    "summary": "Job failed",
+                    "value": {
+                      "jobId": "job_1640995200000_abc123def",
+                      "status": "failed",
+                      "outputKey": null,
+                      "error": "PDF processing failed: Invalid file format",
+                      "createdAt": "2024-01-01T12:00:00.000Z",
+                      "completedAt": null,
+                      "failedAt": "2024-01-01T12:00:03.000Z"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "description": "Job not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "Job not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    },
+    "/api/download-url": {
+      "get": {
+        "tags": ["Download"],
+        "summary": "Generate signed URL for file download",
+        "description": "Creates a presigned URL for downloading processed PDF files from S3.",
+        "operationId": "getDownloadUrl",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "query",
+            "required": true,
+            "description": "S3 key of the processed file to download",
+            "schema": {
+              "type": "string",
+              "pattern": "^processed-uploads/.+\\.pdf$",
+              "example": "processed-uploads/1640995200000-document.pdf"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Download URL generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DownloadUrlResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Download URL generated",
+                    "value": {
+                      "url": "http://localhost:4566/pdf-bucket/processed-uploads/1640995200000-document.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=test%2F20211231%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20211231T120000Z&X-Amz-Expires=3600&X-Amz-Signature=def456"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "description": "File not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "error": "File not found"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "UploadUrlRequest": {
+        "type": "object",
+        "required": ["filename", "contentType"],
+        "properties": {
+          "filename": {
+            "type": "string",
+            "description": "Name of the file to upload",
+            "pattern": "^.+\\.pdf$",
+            "maxLength": 255,
+            "example": "document.pdf"
+          },
+          "contentType": {
+            "type": "string",
+            "description": "MIME type of the file",
+            "enum": ["application/pdf"],
+            "example": "application/pdf"
+          }
+        }
+      },
+      "UploadUrlResponse": {
+        "type": "object",
+        "required": ["url", "key"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Presigned URL for direct S3 upload",
+            "format": "uri",
+            "example": "http://localhost:4566/pdf-bucket/uploads/1640995200000-document.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=test%2F20211231%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20211231T120000Z&X-Amz-Expires=300&X-Amz-Signature=abc123"
+          },
+          "key": {
+            "type": "string",
+            "description": "S3 key where the file will be stored",
+            "pattern": "^uploads/.+\\.pdf$",
+            "example": "uploads/1640995200000-document.pdf"
+          }
+        }
+      },
+      "ProcessRequest": {
+        "type": "object",
+        "required": ["key"],
+        "properties": {
+          "key": {
+            "type": "string",
+            "description": "S3 key of the uploaded file to process",
+            "pattern": "^uploads/.+\\.pdf$",
+            "example": "uploads/1640995200000-document.pdf"
+          },
+          "header": {
+            "type": "string",
+            "description": "Text to add as header on each page",
+            "maxLength": 200,
+            "example": "CONFIDENTIAL"
+          },
+          "footer": {
+            "type": "string",
+            "description": "Text to add as footer on each page",
+            "maxLength": 200,
+            "example": "Company Name"
+          },
+          "watermark": {
+            "type": "string",
+            "description": "Text to add as watermark on each page",
+            "maxLength": 200,
+            "example": "DRAFT"
+          }
+        }
+      },
+      "ProcessResponse": {
+        "type": "object",
+        "required": ["message", "jobId"],
+        "properties": {
+          "message": {
+            "type": "string",
+            "description": "Status message",
+            "example": "Processing started"
+          },
+          "jobId": {
+            "type": "string",
+            "description": "Unique identifier for tracking the processing job",
+            "pattern": "^job_[0-9]+_[a-z0-9]+$",
+            "example": "job_1640995200000_abc123def"
+          }
+        }
+      },
+      "JobStatusResponse": {
+        "type": "object",
+        "required": ["jobId", "status", "createdAt"],
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "description": "Unique identifier for the processing job",
+            "pattern": "^job_[0-9]+_[a-z0-9]+$",
+            "example": "job_1640995200000_abc123def"
+          },
+          "status": {
+            "type": "string",
+            "description": "Current processing status",
+            "enum": ["processing", "done", "failed"],
+            "example": "done"
+          },
+          "outputKey": {
+            "type": ["string", "null"],
+            "description": "S3 key of the processed file (available when status is 'done')",
+            "pattern": "^processed-uploads/.+\\.pdf$",
+            "example": "processed-uploads/1640995200000-document.pdf"
+          },
+          "error": {
+            "type": ["string", "null"],
+            "description": "Error message (available when status is 'failed')",
+            "example": "PDF processing failed: Invalid file format"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp when the job was created",
+            "example": "2024-01-01T12:00:00.000Z"
+          },
+          "completedAt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "Timestamp when the job completed (available when status is 'done')",
+            "example": "2024-01-01T12:00:05.000Z"
+          },
+          "failedAt": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "Timestamp when the job failed (available when status is 'failed')",
+            "example": "2024-01-01T12:00:03.000Z"
+          }
+        }
+      },
+      "DownloadUrlResponse": {
+        "type": "object",
+        "required": ["url"],
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Presigned URL for downloading the processed file",
+            "format": "uri",
+            "example": "http://localhost:4566/pdf-bucket/processed-uploads/1640995200000-document.pdf?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=test%2F20211231%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20211231T120000Z&X-Amz-Expires=3600&X-Amz-Signature=def456"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Error message",
+            "example": "Validation failed"
+          },
+          "details": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Detailed error information (available for validation errors)",
+            "example": ["filename is required", "contentType must be application/pdf"]
+          }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request - validation failed or invalid parameters",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "examples": {
+              "validation_error": {
+                "summary": "Validation failed",
+                "value": {
+                  "error": "Validation failed",
+                  "details": ["filename is required", "contentType must be application/pdf"]
+                }
+              },
+              "invalid_file": {
+                "summary": "Invalid file type",
+                "value": {
+                  "error": "Validation failed",
+                  "details": ["Only PDF files are allowed"]
+                }
+              }
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Internal server error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "examples": {
+              "server_error": {
+                "summary": "Server error",
+                "value": {
+                  "error": "Internal server error"
+                }
+              },
+              "storage_error": {
+                "summary": "Storage service unavailable",
+                "value": {
+                  "error": "Storage service unavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API key for authentication (if implemented)"
+      }
+    }
+  },
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ]
+}
