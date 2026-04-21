@@ -4,6 +4,7 @@ const multer = require('multer');
 const { uploadFile, getFile } = require('./services/s3Service');
 const { handler } = require('./lambda/processPdf');
 const { handler: renderUIHandler } = require('./lambda/renderUI');
+const { log, logError } = require('./utils/logger');
 const signedUrlRoutes = require('./routes/signedUrlRoutes');
 const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('./swagger.json');
@@ -30,7 +31,7 @@ app.get('/ui', async (req, res) => {
     
     res.send(result.body);
   } catch (error) {
-    console.error('UI render error:', error);
+    logError('ui_render_error', error);
     res.status(500).send('<h1>Service Unavailable</h1><p>The UI service is temporarily unavailable.</p>');
   }
 });
@@ -38,35 +39,6 @@ app.get('/ui', async (req, res) => {
 // Redirect root to API documentation
 app.get('/', (req, res) => {
   res.redirect('/api-docs');
-});
-
-app.post('/upload', upload.single('file'), async (req, res) => {
-  try {
-    const file = req.file;
-    if (!file) {
-      return res.status(400).json({ error: 'File is required' });
-    }
-
-    const { header, footer, watermark } = req.body;
-    const key = `uploads/${Date.now()}-${file.originalname}`;
-
-    await uploadFile(BUCKET, key, file.buffer);
-
-    const result = await handler({
-      bucket: BUCKET,
-      key,
-      config: { header, footer, watermark }
-    });
-
-    res.json({
-      message: 'Uploaded & processed',
-      output: result.outputKey
-    });
-
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Internal Server Error' });
-  }
 });
 
 // key looks like : processed-uploads/1776553257954-Ankit_Prajapati.pdf
@@ -84,11 +56,11 @@ app.get('/download', async (req, res) => {
     res.send(file.Body);
 
   } catch (error) {
-    console.error(error);
+    logError('download_error', error, { key: req.query.key });
     res.status(500).json({ error: 'Failed to fetch file' });
   }
 });
 
 app.listen(3000, () => {
-  console.log('Server running on port 3000');
+  log('server_started', { port: 3000 });
 });

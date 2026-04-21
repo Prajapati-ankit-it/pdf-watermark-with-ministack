@@ -46,10 +46,22 @@ const handleValidationError = (errors) => {
 const handleProcessingError = (error) => {
   logError('processing_error', error);
   
-  if (error.message.includes('must be of type')) {
+  // Check for specific PDF processing errors
+  if (error.message.includes('must be of type') || 
+      error.message.includes('Invalid PDF') ||
+      error.message.includes('Corrupt PDF')) {
     return {
       status: 400,
       message: 'Invalid file format'
+    };
+  }
+  
+  // Check for file size or memory issues
+  if (error.message.includes('RangeError') || 
+      error.message.includes('out of memory')) {
+    return {
+      status: 413,
+      message: 'File too large'
     };
   }
   

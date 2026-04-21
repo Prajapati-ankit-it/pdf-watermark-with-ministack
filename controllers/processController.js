@@ -9,6 +9,7 @@ exports.processFile = async (req, res) => {
     const bucket = process.env.S3_BUCKET;
     const jobId = createJob();
 
+    // Start async processing
     processPdfAsync(bucket, key, { header, footer, watermark }, jobId);
 
     log('processing_started', { key, jobId });

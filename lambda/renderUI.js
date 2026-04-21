@@ -1,12 +1,9 @@
 // lambda/renderUI.js
 // Lambda-style function to render dynamic HTML UI
 
-const { log } = require('../utils/logger');
 
 exports.handler = async (event) => {
   try {
-    log('ui_render_requested', { timestamp: new Date().toISOString() });
-    
     const html = `
 <!DOCTYPE html>
 <html lang="en">
@@ -415,9 +412,10 @@ exports.handler = async (event) => {
                 }
                 
                 try {
-                    // Reset UI
+                    // Reset UI and poll counter
                     this.hideAllStatus();
                     this.disableForm();
+                    this.pollCount = 0;
                     
                     // Step 1: Get upload URL
                     this.showStatus('uploadStatus');
@@ -514,8 +512,10 @@ exports.handler = async (event) => {
                     this.updateProgress('processingProgress', 50);
                     
                     if (jobData.status === 'processing') {
-                        // Continue checking
-                        setTimeout(() => this.checkJobStatus(), 2000);
+                        // Continue checking with exponential backoff (3-5 seconds)
+                        const delay = Math.min(3000 + (this.pollCount || 0) * 500, 5000);
+                        this.pollCount = (this.pollCount || 0) + 1;
+                        setTimeout(() => this.checkJobStatus(), delay);
                     } else if (jobData.status === 'done') {
                         this.updateProgress('processingProgress', 100);
                         await this.handleProcessingComplete(jobData.outputKey);
@@ -631,8 +631,6 @@ exports.handler = async (event) => {
 </body>
 </html>`;
     
-    log('ui_render_completed', { timestamp: new Date().toISOString() });
-    
     return {
       statusCode: 200,
       headers: {
@@ -645,8 +643,6 @@ exports.handler = async (event) => {
     };
     
   } catch (error) {
-    log('ui_render_error', { error: error.message, timestamp: new Date().toISOString() });
-    
     return {
       statusCode: 500,
       headers: {

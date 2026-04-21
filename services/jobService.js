@@ -4,7 +4,7 @@ const { log } = require('../utils/logger');
 const jobs = new Map();
 
 const createJob = () => {
-  const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const jobId = `job_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   const job = {
     id: jobId,
     status: 'processing',
@@ -45,21 +45,15 @@ const getJob = (jobId) => {
   return jobs.get(jobId);
 };
 
-// Cleanup old jobs (older than 1 hour)
+// Cleanup old jobs (older than 2 hours)
 const cleanupJobs = () => {
-  const oneHourAgo = Date.now() - (60 * 60 * 1000);
-  let cleaned = 0;
+  const twoHoursAgo = Date.now() - (2 * 60 * 60 * 1000);
   
   for (const [jobId, job] of jobs.entries()) {
     const jobTime = new Date(job.createdAt).getTime();
-    if (jobTime < oneHourAgo) {
+    if (jobTime < twoHoursAgo) {
       jobs.delete(jobId);
-      cleaned++;
     }
-  }
-  
-  if (cleaned > 0) {
-    log('jobs_cleaned', { count: cleaned });
   }
 };
 

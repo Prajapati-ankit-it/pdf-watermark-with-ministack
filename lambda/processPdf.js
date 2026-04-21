@@ -6,15 +6,26 @@ exports.handler = async (event) => {
   const { bucket, key, config } = event;
 
   try {
-    log('pdf_processing_started', { bucket, key, config });
+    // Validate inputs
+    if (!bucket || !key) {
+      throw new Error('Missing required parameters: bucket and key');
+    }
     
     const file = await getFile(bucket, key);
+    
+    if (!file || !file.Body) {
+      throw new Error('Failed to retrieve file from S3');
+    }
+    
     const updatedPdf = await modifyPDF(file.Body, config);
+    
+    if (!updatedPdf) {
+      throw new Error('PDF modification failed - no output');
+    }
+    
     const outputKey = `processed-${key}`;
+    await uploadFile(outputKey, updatedPdf);
     
-    await uploadFile(bucket, outputKey, updatedPdf);
-    
-    log('pdf_processing_completed', { inputKey: key, outputKey });
     return { outputKey };
     
   } catch (error) {
