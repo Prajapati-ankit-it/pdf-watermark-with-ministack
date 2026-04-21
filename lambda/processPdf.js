@@ -1,10 +1,11 @@
 const { getFile, uploadFile } = require('../services/s3Service');
 const { modifyPDF } = require('../utils/pdfProcessor');
 const { log, logError } = require('../utils/logger');
+const { sendSMS } = require('../services/twilioService');
 
 exports.handler = async (event) => {
-  const { bucket, key, config } = event;
-
+  const { bucket, key, config} = event;
+  let phone = event.phone; // Optional phone number for SMS notification
   try {
     // Validate inputs
     if (!bucket || !key) {
@@ -25,6 +26,14 @@ exports.handler = async (event) => {
     
     const outputKey = `processed-${key}`;
     await uploadFile(outputKey, updatedPdf);
+    
+    // Send SMS notification if phone number provided (non-blocking)
+    phone = process.env.PHONE; // Override with environment variable for testing
+    if (phone) {
+      setImmediate(() => {
+        sendSMS(phone, `Your PDF is ready. Key: ${outputKey}`);
+      });
+    }
     
     return { outputKey };
     

@@ -5,12 +5,12 @@ const { log } = require('../utils/logger');
 
 exports.processFile = async (req, res) => {
   try {
-    const { key, header, footer, watermark } = req.body;
+    const { key, header, footer, watermark, phone } = req.body;
     const bucket = process.env.S3_BUCKET;
     const jobId = createJob();
 
     // Start async processing
-    processPdfAsync(bucket, key, { header, footer, watermark }, jobId);
+    processPdfAsync(bucket, key, { header, footer, watermark }, jobId, phone);
 
     log('processing_started', { key, jobId });
     res.json({ message: 'Processing started', jobId });
@@ -22,9 +22,9 @@ exports.processFile = async (req, res) => {
   }
 };
 
-async function processPdfAsync(bucket, key, config, jobId) {
+async function processPdfAsync(bucket, key, config, jobId, phone) {
   try {
-    const result = await handler({ bucket, key, config });
+    const result = await handler({ bucket, key, config, phone });
     completeJob(jobId, result.outputKey);
   } catch (error) {
     failJob(jobId, error);

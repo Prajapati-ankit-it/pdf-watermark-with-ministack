@@ -7,11 +7,9 @@ exports.getJobStatus = async (req, res) => {
     const job = getJob(jobId);
 
     if (!job) {
-      log('job_not_found', { jobId });
       return res.status(404).json({ error: 'Job not found' });
     }
 
-    log('job_status_checked', { jobId, status: job.status });
     res.json({
       jobId: job.id,
       status: job.status,
