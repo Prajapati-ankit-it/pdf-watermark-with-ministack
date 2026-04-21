@@ -3,6 +3,7 @@ const express = require('express');
 const multer = require('multer');
 const { uploadFile, getFile } = require('./services/s3Service');
 const { handler } = require('./lambda/processPdf');
+const { handler: renderUIHandler } = require('./lambda/renderUI');
 const signedUrlRoutes = require('./routes/signedUrlRoutes');
 const swaggerUi = require('swagger-ui-express');
 const swaggerDocument = require('./swagger.json');
@@ -15,6 +16,24 @@ const BUCKET = 'pdf-bucket';
 
 app.use('/api', signedUrlRoutes);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
+// UI route - calls renderUI Lambda handler
+app.get('/ui', async (req, res) => {
+  try {
+    const result = await renderUIHandler();
+    res.status(result.statusCode);
+    
+    // Set headers from Lambda response
+    Object.entries(result.headers || {}).forEach(([key, value]) => {
+      res.set(key, value);
+    });
+    
+    res.send(result.body);
+  } catch (error) {
+    console.error('UI render error:', error);
+    res.status(500).send('<h1>Service Unavailable</h1><p>The UI service is temporarily unavailable.</p>');
+  }
+});
 
 // Redirect root to API documentation
 app.get('/', (req, res) => {
